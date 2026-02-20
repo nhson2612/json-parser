@@ -14,12 +14,23 @@
  *   - Python booleans (True/False) → convert
  */
 
+const DEFAULT_OPTIONS = {
+  strict: false,
+  maxDepth: 100,
+  allowComments: true,
+  allowTrailingComma: true,
+  convertPythonTokens: true,
+  convertUndefined: true,
+};
+
 class FaultTolerantParser {
-  constructor(input) {
+  constructor(input, options = {}) {
     this.input = input;
     this.pos = 0;
     this.errors = [];
-    this._depth = 0; // recursion guard
+    this._depth = 0;
+    this._nestDepth = 0;
+    this.options = { ...DEFAULT_OPTIONS, ...options };
   }
 
   ch() {
@@ -32,11 +43,30 @@ class FaultTolerantParser {
 
   error(msg) {
     this.errors.push({ pos: this.pos, message: msg });
+    if (this.options.strict) {
+      throw new SyntaxError(`[pos ${this.pos}] ${msg}`);
+    }
   }
 
   skipWS() {
-    while (this.pos < this.input.length && /\s/.test(this.input[this.pos])) {
-      this.pos++;
+    while (this.pos < this.input.length) {
+      const c = this.input[this.pos];
+      if (/\s/.test(c)) { this.pos++; continue; }
+      // Skip comments if enabled
+      if (this.options.allowComments) {
+        if (c === '/' && this.input[this.pos + 1] === '/') {
+          this.pos += 2;
+          while (this.pos < this.input.length && this.input[this.pos] !== '\n') this.pos++;
+          continue;
+        }
+        if (c === '/' && this.input[this.pos + 1] === '*') {
+          this.pos += 2;
+          while (this.pos < this.input.length && !(this.input[this.pos] === '*' && this.input[this.pos + 1] === '/')) this.pos++;
+          this.pos += 2;
+          continue;
+        }
+      }
+      break;
     }
   }
 
@@ -59,10 +89,14 @@ class FaultTolerantParser {
     if (this.matchWord("true")) { this.pos += 4; return true; }
     if (this.matchWord("false")) { this.pos += 5; return false; }
     if (this.matchWord("null")) { this.pos += 4; return null; }
-    if (this.matchWord("True")) { this.pos += 4; this.error("Python True → true"); return true; }
-    if (this.matchWord("False")) { this.pos += 5; this.error("Python False → false"); return false; }
-    if (this.matchWord("None")) { this.pos += 4; this.error("Python None → null"); return null; }
-    if (this.matchWord("undefined")) { this.pos += 9; this.error("undefined → null"); return null; }
+    if (this.options.convertPythonTokens) {
+      if (this.matchWord("True")) { this.pos += 4; this.error("Python True → true"); return true; }
+      if (this.matchWord("False")) { this.pos += 5; this.error("Python False → false"); return false; }
+      if (this.matchWord("None")) { this.pos += 4; this.error("Python None → null"); return null; }
+    }
+    if (this.options.convertUndefined) {
+      if (this.matchWord("undefined")) { this.pos += 9; this.error("undefined → null"); return null; }
+    }
     if (this.matchWord("NaN")) { this.pos += 3; this.error("NaN → null"); return null; }
     if (this.matchWord("Infinity")) { this.pos += 8; this.error("Infinity → null"); return null; }
 
@@ -98,8 +132,21 @@ class FaultTolerantParser {
    * Parse a JSON object: { "key": value, ... }
    */
   parseObject() {
+    this._nestDepth++;
+    if (this._nestDepth > this.options.maxDepth) {
+      this.error(`Max depth ${this.options.maxDepth} exceeded`);
+      this._nestDepth--;
+      // Skip to matching close or EOF
+      let bal = 1; this.pos++;
+      while (!this.eof() && bal > 0) {
+        if (this.ch() === '{') bal++;
+        else if (this.ch() === '}') bal--;
+        this.pos++;
+      }
+      return null;
+    }
     const obj = {};
-    this.pos++; // skip '{'
+    this.pos++;
     this.skipWS();
 
     while (!this.eof() && this.ch() !== "}") {
@@ -176,6 +223,7 @@ class FaultTolerantParser {
       }
     }
 
+    this._nestDepth--;
     if (this.ch() === "}") {
       this.pos++;
     } else {
@@ -189,8 +237,20 @@ class FaultTolerantParser {
    * Parse a JSON array: [ value, ... ]
    */
   parseArray() {
+    this._nestDepth++;
+    if (this._nestDepth > this.options.maxDepth) {
+      this.error(`Max depth ${this.options.maxDepth} exceeded`);
+      this._nestDepth--;
+      let bal = 1; this.pos++;
+      while (!this.eof() && bal > 0) {
+        if (this.ch() === '[') bal++;
+        else if (this.ch() === ']') bal--;
+        this.pos++;
+      }
+      return null;
+    }
     const arr = [];
-    this.pos++; // skip '['
+    this.pos++;
     this.skipWS();
 
     while (!this.eof() && this.ch() !== "]") {
@@ -229,6 +289,7 @@ class FaultTolerantParser {
       }
     }
 
+    this._nestDepth--;
     if (this.ch() === "]") {
       this.pos++;
     } else {
@@ -368,19 +429,30 @@ class FaultTolerantParser {
   }
 }
 
-function parseSmart(input) {
+function parseSmart(input, options = {}) {
   if (!input || !input.trim()) {
     return { ok: true, results: [], errorCount: 0, errors: [], multiple: false };
   }
-  const parser = new FaultTolerantParser(input);
-  const { ok, result, errors } = parser.parse();
-  return {
-    ok,
-    results: result !== null && result !== undefined ? [result] : [],
-    errorCount: errors.length,
-    errors: errors.map((e) => `[pos ${e.pos}] ${e.message}`),
-    multiple: false
-  };
+  try {
+    const parser = new FaultTolerantParser(input, options);
+    const { ok, result, errors } = parser.parse();
+    return {
+      ok,
+      results: result !== null && result !== undefined ? [result] : [],
+      errorCount: errors.length,
+      errors: errors.map((e) => `[pos ${e.pos}] ${e.message}`),
+      multiple: false
+    };
+  } catch (err) {
+    // Strict mode throws on first error
+    return {
+      ok: false,
+      results: [],
+      errorCount: 1,
+      errors: [err.message],
+      multiple: false
+    };
+  }
 }
 
-module.exports = { parseSmart, FaultTolerantParser };
+module.exports = { parseSmart, FaultTolerantParser, DEFAULT_OPTIONS };

@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JSON Parser — Smart Recovery &amp; Tools</title>
+  <meta name="description"
+    content="Best-effort JSON parser with fault tolerance, utilities, and smart recovery for broken, truncated, and mixed JSON." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+
+<body>
+  <main class="app">
+    <!-- Header -->
+    <header class="hero">
+      <div class="hero-text">
+        <p class="eyebrow">Fault-Tolerant Engine</p>
+        <h1>JSON Parser</h1>
+        <p class="sub">Parse broken JSON • Format • Query • Diff • Analyze</p>
+      </div>
+      <div class="hero-actions">
+        <button id="themeToggle" class="icon-btn" title="Toggle dark mode">🌙</button>
+        <button id="sampleBtn" class="ghost">Load Sample</button>
+      </div>
+    </header>
+
+    <!-- Options Panel -->
+    <section class="panel options-panel">
+      <div class="panel-header" id="optionsToggle">
+        <label>⚙ Parser Options</label>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="options-grid" id="optionsGrid">
+        <label class="toggle-label"><input type="checkbox" id="opt-strict" /><span>Strict mode</span></label>
+        <label class="toggle-label"><input type="checkbox" id="opt-allowComments" checked /><span>Allow
+            comments</span></label>
+        <label class="toggle-label"><input type="checkbox" id="opt-allowTrailingComma" checked /><span>Allow trailing
+            comma</span></label>
+        <label class="toggle-label"><input type="checkbox" id="opt-convertPythonTokens" checked /><span>Convert Python
+            tokens</span></label>
+        <label class="toggle-label"><input type="checkbox" id="opt-convertUndefined" checked /><span>Convert
+            undefined</span></label>
+        <label class="toggle-label">
+          <span>Max depth</span>
+          <input type="number" id="opt-maxDepth" value="100" min="1" max="1000" class="num-input" />
+        </label>
+      </div>
+    </section>
+
+    <!-- Input Panel -->
+    <section class="panel">
+      <label for="input">Input</label>
+      <textarea id="input" spellcheck="false" placeholder="Paste broken JSON here..."></textarea>
+      <div class="row">
+        <button id="parseBtn" class="primary">▶ Parse</button>
+        <button id="clearBtn" class="ghost">Clear</button>
+        <span id="status" class="status">Idle</span>
+      </div>
+    </section>
+
+    <!-- Toolbar -->
+    <section class="toolbar">
+      <button data-action="prettify" class="tool-btn" title="Pretty-print">{ } Prettify</button>
+      <button data-action="minify" class="tool-btn" title="Compact output">⟨⟩ Minify</button>
+      <button data-action="sort-keys" class="tool-btn" title="Sort keys alphabetically">↕ Sort Keys</button>
+      <button data-action="flatten" class="tool-btn" title="Flatten nested objects">▤ Flatten</button>
+      <button data-action="unflatten" class="tool-btn" title="Unflatten dot-path keys">▥ Unflatten</button>
+      <button data-action="remove-nulls" class="tool-btn" title="Remove null values">✕ Remove Nulls</button>
+      <button data-action="stats" class="tool-btn" title="Show statistics">📊 Stats</button>
+      <button data-action="copy" class="tool-btn" title="Copy output">📋 Copy</button>
+      <button data-action="download" class="tool-btn" title="Download as .json">⬇ Download</button>
+    </section>
+
+    <!-- Query Bar -->
+    <section class="panel query-bar">
+      <div class="query-row">
+        <label for="queryInput">🔍 JSON Path</label>
+        <input type="text" id="queryInput" placeholder="e.g. responseContext.serviceTrackingParams[0].service" />
+        <button id="queryBtn" class="primary small">Query</button>
+      </div>
+    </section>
+
+    <!-- Output Panel -->
+    <section class="panel">
+      <div class="output-header">
+        <label for="output">Output</label>
+        <select id="indentSelect" class="indent-select">
+          <option value="2">2 spaces</option>
+          <option value="4">4 spaces</option>
+          <option value="tab">Tab</option>
+        </select>
+      </div>
+      <pre id="output" class="output"></pre>
+    </section>
+
+    <!-- Stats Panel (hidden initially) -->
+    <section class="panel stats-panel" id="statsPanel" style="display:none">
+      <label>📊 Statistics</label>
+      <div class="stats-grid" id="statsGrid"></div>
+    </section>
+
+    <!-- Notes / Error Log -->
+    <section class="panel">
+      <label>Recovery Log</label>
+      <ul id="notes" class="notes"></ul>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+
+</html>
