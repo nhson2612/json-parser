@@ -4,113 +4,153 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>JSON Parser — Smart Recovery &amp; Tools</title>
-  <meta name="description"
-    content="Best-effort JSON parser with fault tolerance, utilities, and smart recovery for broken, truncated, and mixed JSON." />
+  <title>JSON IDE — Smart Parser</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
-    rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 
-<body>
-  <main class="app">
-    <!-- Header -->
-    <header class="hero">
-      <div class="hero-text">
-        <p class="eyebrow">Fault-Tolerant Engine</p>
-        <h1>JSON Parser</h1>
-        <p class="sub">Parse broken JSON • Format • Query • Diff • Analyze</p>
-      </div>
-      <div class="hero-actions">
-        <button id="themeToggle" class="icon-btn" title="Toggle dark mode">🌙</button>
-        <button id="sampleBtn" class="ghost">Load Sample</button>
-      </div>
-    </header>
+<body data-theme="dark">
+  <!-- Top Bar -->
+  <header class="top-bar">
+    <div class="menu-items">
+      <span class="logo">JSON IDE</span>
+      <span class="menu-item" id="sampleBtn">Sample</span>
+      <span class="menu-item" id="clearBtn">Clear</span>
+      <span class="menu-item" id="themeToggle">Theme</span>
+    </div>
+    <div class="top-actions">
+      <button id="parseBtn" class="btn">▶ RUN PARSE</button>
+    </div>
+  </header>
 
-    <!-- Options Panel -->
-    <section class="panel options-panel">
-      <div class="panel-header" id="optionsToggle">
-        <label>⚙ Parser Options</label>
-        <span class="chevron">▾</span>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-icon active" title="Explorer">📂</div>
+      <div class="sidebar-icon" id="settingsToggle" title="Settings">⚙</div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="workspace">
+      <!-- Query Bar -->
+      <div class="query-bar">
+        <span style="font-size: 11px; color: var(--muted); font-weight: 600;">QUERY:</span>
+        <input type="text" id="queryInput" class="query-input" placeholder="e.g. users[0].name" />
+        <button id="queryBtn" class="btn btn-ghost">Execute</button>
+        <div id="querySuggestions" class="suggestions" style="display:none">
+          <ul id="suggestionList" style="list-style:none"></ul>
+        </div>
       </div>
-      <div class="options-grid" id="optionsGrid">
-        <label class="toggle-label"><input type="checkbox" id="opt-strict" /><span>Strict mode</span></label>
-        <label class="toggle-label"><input type="checkbox" id="opt-allowComments" checked /><span>Allow
-            comments</span></label>
-        <label class="toggle-label"><input type="checkbox" id="opt-allowTrailingComma" checked /><span>Allow trailing
-            comma</span></label>
-        <label class="toggle-label"><input type="checkbox" id="opt-convertPythonTokens" checked /><span>Convert Python
-            tokens</span></label>
-        <label class="toggle-label"><input type="checkbox" id="opt-convertUndefined" checked /><span>Convert
-            undefined</span></label>
-        <label class="toggle-label">
-          <span>Max depth</span>
-          <input type="number" id="opt-maxDepth" value="100" min="1" max="1000" class="num-input" />
-        </label>
+
+      <!-- Editor Area -->
+      <div class="editor-area">
+        <!-- Input Panel -->
+        <section class="panel">
+          <div class="panel-header">
+            <span class="panel-title">input.json</span>
+            <span id="charCount" style="font-size: 10px; color: var(--muted);">0 chars</span>
+          </div>
+          <div class="panel-content input-content">
+            <textarea id="input" spellcheck="false" placeholder="Paste JSON here..."></textarea>
+            <pre id="inputHighlight" class="input-highlight" aria-hidden="true"></pre>
+          </div>
+        </section>
+
+        <!-- Output Panel -->
+        <section class="panel">
+          <div class="panel-header">
+            <span class="panel-title">output.json</span>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <select id="indentSelect" class="btn btn-ghost" style="padding: 2px 5px;">
+                <option value="2">Spaces: 2</option>
+                <option value="4">Spaces: 4</option>
+                <option value="tab">Tab</option>
+              </select>
+            </div>
+          </div>
+          <div class="panel-content output-content">
+            <pre id="output" class="output">// Results will appear here</pre>
+
+            <!-- Floating Toolbar -->
+            <div class="toolbar">
+              <button data-action="copy" class="tool-btn" title="Copy">📋</button>
+              <button data-action="prettify" class="tool-btn" title="Prettify">{ }</button>
+              <button data-action="minify" class="tool-btn" title="Minify">min</button>
+              <button data-action="sort-keys" class="tool-btn" title="Sort">↕</button>
+              <button data-action="stats" class="tool-btn" title="Stats">📊</button>
+              <button data-action="download" class="tool-btn" title="Download">⬇</button>
+            </div>
+          </div>
+        </section>
       </div>
-    </section>
 
-    <!-- Input Panel -->
-    <section class="panel">
-      <label for="input">Input</label>
-      <textarea id="input" spellcheck="false" placeholder="Paste broken JSON here..."></textarea>
-      <div class="row">
-        <button id="parseBtn" class="primary">▶ Parse</button>
-        <button id="clearBtn" class="ghost">Clear</button>
-        <span id="status" class="status">Idle</span>
-      </div>
-    </section>
+      <!-- Settings Drawer -->
+      <section class="settings-panel" id="settingsPanel" style="display:none">
+        <div class="settings-header">
+          <span>Settings</span>
+          <button id="settingsClose" class="btn btn-ghost">Close</button>
+        </div>
+        <div class="settings-grid" id="optionsGrid">
+          <label class="opt">
+            <input type="checkbox" id="opt-strict" />
+            <span>Strict mode</span>
+          </label>
+          <label class="opt">
+            <input type="checkbox" id="opt-allowComments" checked />
+            <span>Allow comments</span>
+          </label>
+          <label class="opt">
+            <input type="checkbox" id="opt-allowTrailingComma" checked />
+            <span>Allow trailing comma</span>
+          </label>
+          <label class="opt">
+            <input type="checkbox" id="opt-convertPythonTokens" checked />
+            <span>Convert Python tokens</span>
+          </label>
+          <label class="opt">
+            <input type="checkbox" id="opt-convertUndefined" checked />
+            <span>Convert undefined</span>
+          </label>
+          <label class="opt">
+            <span>Max depth</span>
+            <input type="number" id="opt-maxDepth" value="100" min="1" max="1000" class="opt-num" />
+          </label>
+        </div>
+      </section>
 
-    <!-- Toolbar -->
-    <section class="toolbar">
-      <button data-action="prettify" class="tool-btn" title="Pretty-print">{ } Prettify</button>
-      <button data-action="minify" class="tool-btn" title="Compact output">⟨⟩ Minify</button>
-      <button data-action="sort-keys" class="tool-btn" title="Sort keys alphabetically">↕ Sort Keys</button>
-      <button data-action="flatten" class="tool-btn" title="Flatten nested objects">▤ Flatten</button>
-      <button data-action="unflatten" class="tool-btn" title="Unflatten dot-path keys">▥ Unflatten</button>
-      <button data-action="remove-nulls" class="tool-btn" title="Remove null values">✕ Remove Nulls</button>
-      <button data-action="stats" class="tool-btn" title="Show statistics">📊 Stats</button>
-      <button data-action="copy" class="tool-btn" title="Copy output">📋 Copy</button>
-      <button data-action="download" class="tool-btn" title="Download as .json">⬇ Download</button>
-    </section>
+      <!-- Bottom Panel -->
+      <footer class="bottom-panel">
+        <div class="tab-container">
+          <div class="tab active" data-tab="recovery">Recovery Log</div>
+          <div class="tab" data-tab="stats">Statistics</div>
+        </div>
+        <div class="tab-content" id="recovery-tab">
+          <ul id="notes" class="recovery-log">
+            <li class="log-item">Ready to parse.</li>
+          </ul>
+        </div>
+        <div class="tab-content" id="stats-tab" style="display:none">
+          <div id="statsGrid" class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px;">
+            <!-- Stats cards here -->
+          </div>
+        </div>
+      </footer>
+    </main>
+  </div>
 
-    <!-- Query Bar -->
-    <section class="panel query-bar">
-      <div class="query-row">
-        <label for="queryInput">🔍 JSON Path</label>
-        <input type="text" id="queryInput" placeholder="e.g. responseContext.serviceTrackingParams[0].service" />
-        <button id="queryBtn" class="primary small">Query</button>
-      </div>
-    </section>
-
-    <!-- Output Panel -->
-    <section class="panel">
-      <div class="output-header">
-        <label for="output">Output</label>
-        <select id="indentSelect" class="indent-select">
-          <option value="2">2 spaces</option>
-          <option value="4">4 spaces</option>
-          <option value="tab">Tab</option>
-        </select>
-      </div>
-      <pre id="output" class="output"></pre>
-    </section>
-
-    <!-- Stats Panel (hidden initially) -->
-    <section class="panel stats-panel" id="statsPanel" style="display:none">
-      <label>📊 Statistics</label>
-      <div class="stats-grid" id="statsGrid"></div>
-    </section>
-
-    <!-- Notes / Error Log -->
-    <section class="panel">
-      <label>Recovery Log</label>
-      <ul id="notes" class="notes"></ul>
-    </section>
-  </main>
+  <!-- Status Bar -->
+  <footer class="status-bar">
+    <div class="status-left">
+      <span id="status">Ready</span>
+    </div>
+    <div class="status-right">
+      <span>UTF-8</span>
+      <span>JSON</span>
+      <span>Ln 1, Col 1</span>
+    </div>
+  </footer>
 
   <script src="/app.js"></script>
 </body>

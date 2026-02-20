@@ -184,6 +184,11 @@ class FaultTolerantParser {
 
       this.skipWS();
 
+      if (typeof key === "string" && /^,+/.test(key)) {
+        this.error(`Leading comma in key "${key}" at pos ${this.pos}`);
+        key = key.replace(/^,+\s*/, "");
+      }
+
       // Expect colon
       if (this.ch() === ":") {
         this.pos++;
@@ -269,6 +274,13 @@ class FaultTolerantParser {
         this.error(`Unexpected '}' inside array at pos ${this.pos}, skipping`);
         this.pos++;
         continue;
+      }
+
+      // Heuristic: looks like an object key inside array (e.g. "fps": 30)
+      // This likely means the array should have ended earlier.
+      if (this._looksLikeKeyValueAhead()) {
+        this.error(`Detected object key inside array at pos ${this.pos}, closing array`);
+        break;
       }
 
       const value = this.parseValue();
@@ -418,6 +430,36 @@ class FaultTolerantParser {
     const start = this.pos;
     while (!this.eof() && /[\w$]/.test(this.ch())) this.pos++;
     return this.input.slice(start, this.pos);
+  }
+
+  _looksLikeKeyValueAhead() {
+    const start = this.pos;
+    const c = this.ch();
+
+    // Quoted key
+    if (c === '"' || c === "'") {
+      let i = start + 1;
+      while (i < this.input.length) {
+        const ch = this.input[i];
+        if (ch === "\\") { i += 2; continue; }
+        if (ch === c) { i++; break; }
+        if (ch === "\n" || ch === "\r") return false;
+        i++;
+      }
+      if (i >= this.input.length) return false;
+      while (i < this.input.length && /\s/.test(this.input[i])) i++;
+      return this.input[i] === ":";
+    }
+
+    // Unquoted key
+    if (/[a-zA-Z_$]/.test(c)) {
+      let i = start;
+      while (i < this.input.length && /[\w$]/.test(this.input[i])) i++;
+      while (i < this.input.length && /\s/.test(this.input[i])) i++;
+      return this.input[i] === ":";
+    }
+
+    return false;
   }
 
   parse() {
