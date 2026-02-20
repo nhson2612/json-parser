@@ -1,0 +1,17 @@
+node_modules
+npm-debug.log
+.git
+.github
+.gemini
+.agent
+.codex
+.kilocode
+.opencode
+.qwen
+_bmad
+_bmad-output
+docs
+test
+*.md
+.dockerignore
+Dockerfile
