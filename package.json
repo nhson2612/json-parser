@@ -1,0 +1,15 @@
+{
+  "name": "json-parser",
+  "version": "0.1.0",
+  "description": "Smart JSON parser with best-effort recovery",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "json5": "^2.2.3"
+  }
+}
